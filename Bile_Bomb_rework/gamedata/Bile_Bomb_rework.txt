@@ -1,0 +1,138 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Functions"
+		{
+			"CTerrorPlayer::OnHitByVomitJar"
+			{
+				"signature"		"CTerrorPlayer::OnHitByVomitJar"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+				"arguments"
+				{
+					"attacker"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+			"Infected::OnHitByVomitJar"
+			{
+				"signature"		"Infected::OnHitByVomitJar"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+				"arguments"
+				{
+					"attacker"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+			"CVomitJarProjectile::ExplodeVomit"
+			{
+				"signature"		"CVomitJarProjectile::ExplodeVomit"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+				"arguments"
+				{
+					"float1"
+					{
+						"type"	"float"
+					}
+					"float2"
+					{
+						"type"	"float"
+					}
+					"float3"
+					{
+						"type"	"float"
+					}
+					"float4"
+					{
+						"type"	"float"
+					}
+					"float5"
+					{
+						"type"	"float"
+					}
+					"float6"
+					{
+						"type"	"float"
+					}
+				}
+			}
+			"CVomitJarProjectile::Detonate"
+			{
+				"signature"		"CVomitJarProjectile::Detonate"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+			}
+		}
+		"MemPatches"
+		{
+			"CVomitJarProjectile::ExplodeVomit()::mobspawn_Patch"
+			{
+				"signature"			"CVomitJarProjectile::ExplodeVomit"
+				"linux"
+				{
+					"offset"		"1766"
+					"verify"		"\xE8"
+					"patch"			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+					
+				}
+				"windows"
+				{
+					"offset"		"1101"
+					"verify"		"\x53\xE8"
+					"patch"			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+				}
+			}
+		}
+		"Signatures"
+		{
+			"CVomitJarProjectile::ExplodeVomit"
+			{
+				"library"		"server"
+				"linux"			"@_ZN19CVomitJarProjectile12ExplodeVomitE6VectorS0_"
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x08\x00\x00\xA1\x2A\x2A\x2A\x2A\x33\xC5\x89\x45\xFC\x8B\x45\x08\x8B\x55\x10\xF3\x0F\x10\x5D\x10"
+								/* ? ? ? ? ? ? 08 00 00 A1 ? ? ? ? 33 C5 89 45 FC 8B 45 08 8B 55 10 F3 0F 10 5D 10 */
+				
+			}
+			"CTerrorPlayer::OnHitByVomitJar"
+			{
+				"library"		"server"
+				"linux"			"@_ZN13CTerrorPlayer15OnHitByVomitJarEP20CBaseCombatCharacter"
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x8B\x06\x8B\x90\x70\x07\x00\x00"
+								/* ? ? ? ? ? ? 56 8B F1 E8 ? ? ? ? 84 C0 74 ? 8B 06 8B 90 70 07 00 00 */
+				
+			}
+			"CTerrorPlayer::OnVomitedUpon"
+			{
+				"library"		"server"
+				"linux"			"@_ZN13CTerrorPlayer13OnVomitedUponEPS_b"
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x8B\x06"
+								/* ? ? ? ? ? ? 53 56 57 8B F1 E8 ? ? ? ? 84 C0 74 ? 8B 06 */
+			}
+			"CVomitJarProjectile::Detonate"
+			{
+				"library"		"server"
+				"linux"			"@_ZN19CVomitJarProjectile8DetonateEv"
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\xC5\x89\x45\xFC\x56\x57\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x8B\xF8\xF6\x47\x42\x04\x0F\x85"
+								/* ? ? ? ? ? ? A1 ? ? ? ? 33 C5 89 45 FC 56 57 8B F1 E8 ? ? ? ? 8B F8 F6 47 42 04 0F 85 */
+			}
+			"Infected::OnHitByVomitJar"
+			{
+				"library"		"server"
+				"linux"			"@_ZN8Infected15OnHitByVomitJarEP20CBaseCombatCharacter"
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\x8B\x06\x8B\x90\x24\x01\x00\x00\xFF\xD2\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\x8B\x06\x8B\x90\x48\x05\x00\x00"
+								/* ? ? ? ? ? ? 56 8B F1 8B 06 8B 90 24 01 00 00 FF D2 84 C0 0F 84 ? ? ? ? 8B 06 8B 90 48 05 00 00 */
+			}
+		}
+	}
+}
