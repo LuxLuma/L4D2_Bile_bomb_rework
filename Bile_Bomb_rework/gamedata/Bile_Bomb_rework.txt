@@ -108,8 +108,8 @@
 			{
 				"library"		"server"
 				"linux"			"@_ZN13CTerrorPlayer15OnHitByVomitJarEP20CBaseCombatCharacter"
-				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x8B\x06\x8B\x90\x70\x07\x00\x00"
-								/* ? ? ? ? ? ? 56 8B F1 E8 ? ? ? ? 84 C0 74 ? 8B 06 8B 90 70 07 00 00 */
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x8B\x06\x8B\x90\x74\x07\x00\x00"
+								/* ? ? ? ? ? ? 56 8B F1 E8 ? ? ? ? 84 C0 74 ? 8B 06 8B 90 74 07 00 00  */
 				
 			}
 			"CTerrorPlayer::OnVomitedUpon"
@@ -130,8 +130,8 @@
 			{
 				"library"		"server"
 				"linux"			"@_ZN8Infected15OnHitByVomitJarEP20CBaseCombatCharacter"
-				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\x8B\x06\x8B\x90\x24\x01\x00\x00\xFF\xD2\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\x8B\x06\x8B\x90\x48\x05\x00\x00"
-								/* ? ? ? ? ? ? 56 8B F1 8B 06 8B 90 24 01 00 00 FF D2 84 C0 0F 84 ? ? ? ? 8B 06 8B 90 48 05 00 00 */
+				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\x8B\x06\x8B\x90\x28\x01\x00\x00\xFF\xD2\x84\xC0\x0F\x84\x2A\x2A\x2A\x2A\x8B\x06\x8B\x90\x4C\x05\x00\x00"
+								/* ? ? ? ? ? ? 56 8B F1 8B 06 8B 90 28 01 00 00 FF D2 84 C0 0F 84 ? ? ? ? 8B 06 8B 90 4C 05 00 00 */
 			}
 		}
 	}
