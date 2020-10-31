@@ -24,6 +24,7 @@
 #include <sourcescramble>
 #include <smlib>
 #include <timocop>
+#include <lux_library>
 #include <dhooks>
 
 #pragma newdecls required
@@ -35,7 +36,7 @@
 #define ENTITY_SAFE_LIMIT 1900
 
 #define ACID_ATTACK_INTERVAL 0.1
-#define ACID_DAMAGE_PERCENT 0.01
+#define ACID_DAMAGE_PERCENT 0.0095
 #define ACID_ATTACK_INTERVAL_SURVIVOR 0.1
 #define ACID_DAMAGE_PERCENT_SURVIVORS 0.01
 
@@ -43,19 +44,18 @@
 #define ACID_LIFETIME_SURVIVOR 0.15 //m_itTimer
 
 #define VOMIT_JAR_LIFETIME_SURVIVOR 20
-#define VOMIT_JAR_RADIUS_SURVIVOR 85
-#define VOMIT_JAR_RADIUS 150
+#define VOMIT_JAR_RADIUS_SURVIVOR 90
+#define VOMIT_JAR_RADIUS 200
 #define VOMIT_JAR_LIFETIME 20
 
 Handle hOnVomitedUpon;
+Handle hOnVomitedUpon_NB;
 
-bool g_bShouldIntervene = false;
-int g_iThrower = -1;
 int g_iEffectIndex = -1;
-int g_iVomitjar_ParticleIndex = INVALID_STRING_INDEX;
 int g_iVomitJar_ParticleReplacement = INVALID_STRING_INDEX;
 int g_iVomitJar_AcidSplash = INVALID_STRING_INDEX;
 int g_iVomitJar_AcidTrail = INVALID_STRING_INDEX;
+int g_iVomitJar_GooTrail = INVALID_STRING_INDEX;
 
 float g_flAcidAttackTime[2048+1] = {-1.0, ...};
 float g_flAcidAttackNextAttack[2048+1] = {-1.0, ...};
@@ -98,36 +98,13 @@ public void OnPluginStart()
 	Handle hGamedata = LoadGameConfigFile(GAMEDATA);
 	if(hGamedata == null) 
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-	
-	MemoryPatch vomitJarMobCall = MemoryPatch.CreateFromConf(hGamedata, "CVomitJarProjectile::ExplodeVomit()::mobspawn_Patch");
-	if(!vomitJarMobCall.Validate())
-		SetFailState("Unable to load offset signatures differ 'CVomitJarProjectile::ExplodeVomit()::mobspawn_Patch'.", GAMEDATA);
-	
-	if(!vomitJarMobCall.Enable())
-		PrintToServer("Patch already applied? 'CVomitJarProjectile::ExplodeVomit()::mobspawn_Patch'");
-	
+		
 	Handle hDetour;
-	hDetour = DHookCreateFromConf(hGamedata, "CTerrorPlayer::OnHitByVomitJar");
-	if(!hDetour)
-		SetFailState("Failed to find 'CTerrorPlayer::OnHitByVomitJar' signature");
-	
-	if(!DHookEnableDetour(hDetour, false, TerrorPlayerOnHitByVomitJar))
-		SetFailState("Failed to detour 'CTerrorPlayer::OnHitByVomitJar'");
-	
-	hDetour = DHookCreateFromConf(hGamedata, "Infected::OnHitByVomitJar");
-	if(!hDetour)
-		SetFailState("Failed to find 'Infected::OnHitByVomitJar' signature");
-	
-	if(!DHookEnableDetour(hDetour, false, InfectedOnHitByVomitJar))
-		SetFailState("Failed to detour 'Infected::OnHitByVomitJar'");
-	
 	hDetour = DHookCreateFromConf(hGamedata, "CVomitJarProjectile::ExplodeVomit");
 	if(!hDetour)
 		SetFailState("Failed to find 'CVomitJarProjectile::ExplodeVomit' signature");
 	
 	if(!DHookEnableDetour(hDetour, false, PreExplodeVomit))
-		SetFailState("Failed to detour 'CVomitJarProjectile::ExplodeVomit'");
-	if(!DHookEnableDetour(hDetour, true, PostExplodeVomit))
 		SetFailState("Failed to detour 'CVomitJarProjectile::ExplodeVomit'");
 	
 	hDetour = DHookCreateFromConf(hGamedata, "CVomitJarProjectile::Detonate");
@@ -147,6 +124,15 @@ public void OnPluginStart()
 	if(hOnVomitedUpon == null)
 		SetFailState("Unable to prep SDKCall 'CTerrorPlayer::OnVomitedUpon'");
 	
+	StartPrepSDKCall(SDKCall_Entity);
+	if(!PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "Infected::OnHitByVomitJar"))
+		SetFailState("Error finding the 'Infected::OnHitByVomitJar' signature.");
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+	
+	hOnVomitedUpon_NB = EndPrepSDKCall();
+	if(hOnVomitedUpon_NB == null)
+		SetFailState("Unable to prep SDKCall 'Infected::OnHitByVomitJar");
+	
 	delete hGamedata;
 	
 	HookConVarChange(FindConVar("vomitjar_duration_survivor"), CvarsChanged);
@@ -155,8 +141,6 @@ public void OnPluginStart()
 	HookConVarChange(FindConVar("vomitjar_duration_infected_pz"), CvarsChanged);
 	HookConVarChange(FindConVar("vomitjar_duration_infected_bot"), CvarsChanged);
 	CvarsChange();
-	
-	AddTempEntHook("EffectDispatch", TEParticleHook);
 }
 
 public void CvarsChanged(ConVar convar, const char[] oldValue, const char[] newValue)
@@ -193,10 +177,10 @@ public void OnMapStart()
 			SetFailState("Unable to find 'ParticleEffectNames' Table index");
 		}
 	}
-	g_iVomitjar_ParticleIndex = __FindStringIndex2(particleEffectNames, "vomit_jar");
 	g_iVomitJar_ParticleReplacement = __FindStringIndex2(particleEffectNames, "smoker_smokecloud");
 	g_iVomitJar_AcidSplash = PrecacheParticleSystem("spitter_areaofdenial");
 	g_iVomitJar_AcidTrail = PrecacheParticleSystem("spitter_areaofdenial_base_refract");
+	g_iVomitJar_GooTrail = PrecacheParticleSystem("spitter_slime_trail");
 	
 	for(int i = 0; i < sizeof(g_sRandomSound); i++)
 		PrecacheSound(g_sRandomSound[i], true);
@@ -228,7 +212,7 @@ public void PostThinkPost(int client)
 	}
 	else if(team == 3)
 	{
-		SDKHooks_TakeDamage(client, 0, GetClientOfUserId(g_iAcidAttackerUserid[client]), float(RoundToCeil(GetEntProp(client, Prop_Data, "m_iMaxHealth", 4) * ACID_DAMAGE_PERCENT)), DMG_ACID);
+		SDKHooks_TakeDamage(client, 0, GetClientOfUserId(g_iAcidAttackerUserid[client]), 1.0 + float(RoundToCeil(GetEntProp(client, Prop_Data, "m_iMaxHealth", 4) * ACID_DAMAGE_PERCENT)), DMG_ACID);
 		g_flAcidAttackNextAttack[client] = fTime + ACID_ATTACK_INTERVAL;
 	}
 	AcidOnFloor(client);
@@ -260,85 +244,83 @@ public MRESReturn PreDetonate(int pThis)
 	return MRES_Ignored;
 }
 
-public MRESReturn InfectedOnHitByVomitJar(int pThis, Handle hParams)
+public MRESReturn PreExplodeVomit(int pThis)
 {
-	if(DHookIsNullParam(hParams, 1))
-		DHookSetParam(hParams, 1, g_iThrower);//busted always seems to be passed -1
-	
-	if(!g_bShouldIntervene)
-		return MRES_Handled;
-	
-	if(GetEntProp(pThis, Prop_Data, "m_iHealth") <= 0)
-		return MRES_Ignored;
-	
-	SDKHook(pThis, SDKHook_Think, AcidThink);
-	
-	float fTime = GetGameTime();
-	g_flAcidAttackTime[pThis] = fTime + VOMIT_JAR_LIFETIME * ACID_LIFETIME;
-	g_flAcidAttackNextAttack[pThis] = fTime + ACID_ATTACK_INTERVAL;
-	g_iAcidAttackerUserid[pThis] = (g_iThrower > 0 && g_iThrower < MaxClients+1 ? GetClientUserId(g_iThrower) : 0);
-	return MRES_Handled;
-}
-
-public MRESReturn TerrorPlayerOnHitByVomitJar(int pThis, Handle hParams)
-{
-	if(!g_bShouldIntervene)
-		return MRES_Ignored;
-	
-	int iTeam = GetClientTeam(pThis);
-	float fTime = GetGameTime();
-	if(iTeam == 2)
-	{
-		if(g_iThrower != pThis)
-			return MRES_Supercede;
-		
-		g_flAcidAttackTime[pThis] = fTime + VOMIT_JAR_LIFETIME_SURVIVOR * ACID_LIFETIME_SURVIVOR;
-		g_flAcidAttackNextAttack[pThis] = fTime + ACID_ATTACK_INTERVAL_SURVIVOR;
-		g_iAcidAttackerUserid[pThis] = 0;
-	}
-	else if(iTeam == 3)
-	{
-		g_flAcidAttackTime[pThis] = fTime + VOMIT_JAR_LIFETIME * ACID_LIFETIME;
-		g_flAcidAttackNextAttack[pThis] = fTime + ACID_ATTACK_INTERVAL;
-		g_iAcidAttackerUserid[pThis] = (g_iThrower > 0 && g_iThrower < MaxClients+1 ? GetClientUserId(g_iThrower) : 0);
-	}
-	
-
-	SDKCall(hOnVomitedUpon, pThis, (g_iThrower == -1 ? pThis : g_iThrower), 0);
+	BreakBilejar(pThis, GetEntPropEnt(pThis, Prop_Send, "m_hThrower"));
 	return MRES_Supercede;
 }
 
-public MRESReturn PreExplodeVomit(int pThis)
+void BreakBilejar(int entity, int attacker)
 {
-	g_iThrower = GetEntPropEnt(pThis, Prop_Send, "m_hThrower");
-	g_bShouldIntervene = true;
-	return MRES_Ignored;
-}
-
-public MRESReturn PostExplodeVomit(int pThis)
-{
-	g_iThrower = -1;
-	g_bShouldIntervene = false;
-	return MRES_Ignored;
-}
-
-public Action TEParticleHook(const char[] te_name, const int[] Players, int numClients, float delay)
-{
-	if(!g_bShouldIntervene || g_iEffectIndex != TE_ReadNum("m_iEffectName"))
-		return Plugin_Continue;
+	static float vecJarPos[3];
+	static float vecPlayerPos[3];
 	
-	if(TE_ReadNum("m_nHitBox") == g_iVomitjar_ParticleIndex)
+	int iTeam;
+	float fTime = GetGameTime();
+	Entity_GetAbsOrigin(entity, vecJarPos);
+	
+	for(int i = 1; i <= MaxClients; ++i)
 	{
-		float flPos[3];
-		flPos[0] = TE_ReadFloat("m_vOrigin.x"); 
-		flPos[1] = TE_ReadFloat("m_vOrigin.y"); 
-		flPos[2] = TE_ReadFloat("m_vOrigin.z"); 
-		L4D_TE_Create_Particle(flPos, _, g_iVomitJar_ParticleReplacement);
-		L4D_TE_Create_Particle(flPos, _, g_iVomitJar_AcidSplash);
-		//TE_WriteNum("m_nHitBox", g_iVomitJar_ParticleReplacement);//why you no work :c
-		return Plugin_Handled;
+		if(!IsClientInGame(i) || !IsPlayerAlive(i))
+			continue;
+		
+		iTeam = GetClientTeam(i);
+		
+		switch(iTeam)
+		{
+			case 2:
+			{
+				if(attacker != i)
+					continue;
+				
+				GetEntityAbsOrigin(i, vecPlayerPos, true);
+				if(GetVectorDistance(vecJarPos, vecPlayerPos) > VOMIT_JAR_RADIUS_SURVIVOR)
+					continue;
+				
+				g_flAcidAttackTime[i] = fTime + VOMIT_JAR_LIFETIME_SURVIVOR * ACID_LIFETIME_SURVIVOR;
+				g_flAcidAttackNextAttack[i] = fTime + ACID_ATTACK_INTERVAL_SURVIVOR;
+				g_iAcidAttackerUserid[i] = 0;
+				
+				SDKCall(hOnVomitedUpon, i, (attacker == -1 ? i : attacker), 0);
+			}
+			case 3:
+			{
+				if(GetEntProp(i, Prop_Send, "m_isGhost", 1) > 0)
+					continue;
+				
+				GetEntityAbsOrigin(i, vecPlayerPos, true);
+				if(GetVectorDistance(vecJarPos, vecPlayerPos) > VOMIT_JAR_RADIUS)
+					continue;
+				
+				g_flAcidAttackTime[i] = fTime + VOMIT_JAR_LIFETIME * ACID_LIFETIME;
+				g_flAcidAttackNextAttack[i] = fTime + ACID_ATTACK_INTERVAL;
+				g_iAcidAttackerUserid[i] = (attacker > 0 && attacker < MaxClients+1 ? GetClientUserId(attacker) : 0);
+				
+				SDKCall(hOnVomitedUpon, i, (attacker == -1 ? i : attacker), 0);
+			}
+		}
 	}
-	return Plugin_Continue;
+	
+	for(int i = MaxClients+1; i <= 2048; ++i)
+	{
+		if(!IsCommonOrWitch(i) || GetEntProp(i, Prop_Data, "m_iHealth") <= 0)
+			continue;
+		
+		GetEntityAbsOrigin(i, vecPlayerPos, true);
+		if(GetVectorDistance(vecJarPos, vecPlayerPos) > VOMIT_JAR_RADIUS)
+			continue;
+		
+		SDKHook(i, SDKHook_Think, AcidThink);
+	
+		g_flAcidAttackTime[i] = fTime + VOMIT_JAR_LIFETIME * ACID_LIFETIME;
+		g_flAcidAttackNextAttack[i] = fTime + ACID_ATTACK_INTERVAL;
+		g_iAcidAttackerUserid[i] = (attacker > 0 && attacker < MaxClients+1 ? GetClientUserId(attacker) : 0);
+		
+		SDKCall(hOnVomitedUpon_NB, i, attacker);
+	}
+	
+	L4D_TE_Create_Particle(vecJarPos, _, g_iVomitJar_ParticleReplacement);
+	L4D_TE_Create_Particle(vecJarPos, _, g_iVomitJar_AcidSplash);
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -348,31 +330,17 @@ public void OnEntityCreated(int entity, const char[] classname)
 	
 	g_flPreventBreakTime[entity] = 0.0;
 	g_flAcidAttackTime[entity] = 0.0;
-	if(g_bShouldIntervene && classname[0] == 'i' && StrEqual(classname, "info_goal_infected_chase", false))
-	{
-		SDKHook(entity, SDKHook_SpawnPost, RemoveChaseEntity);
-		return;
-	}
-	
 	if(classname[0] != 'v' || !StrEqual(classname, "vomitjar_projectile"))
 		return;
 	
 	SDKHook(entity, SDKHook_SpawnPost, AttachTrail);
 }
 
-public void RemoveChaseEntity(int entity)
-{
-	SetVariantString("OnUser1 !self:Kill::1:-1");
-	AcceptEntityInput(entity, "AddOutput");
-	AcceptEntityInput(entity, "FireUser1");
-	//RemoveEntity(entity);
-}
-
 public void AttachTrail(int entity)
 {
 	SDKUnhook(entity, SDKHook_SpawnPost, AttachTrail);
 	SDKHook(entity, SDKHook_StartTouch, StartTouch);	
-	g_flPreventBreakTime[entity] = GetGameTime() + 0.12;
+	g_flPreventBreakTime[entity] = GetGameTime() + 0.2;
 	JarTrail(entity);
 }
 
@@ -448,7 +416,7 @@ void AcidOnFloor(int iVictim)
 		fTmpPos[1] = GetArrayCell(hArray, i, 1);
 		fTmpPos[2] = GetArrayCell(hArray, i, 2);
 		
-		if(GetVectorDistance(fTmpPos, fPos) < 60.0)
+		if(GetVectorDistance(fTmpPos, fPos) < 50.0)
 			bisBloodNear = true;
 	}
 	
@@ -464,76 +432,9 @@ void AcidOnFloor(int iVictim)
 	L4D_TE_Create_Particle(fPos, _, g_iVomitJar_AcidTrail);
 }
 
-stock bool L4D_TE_Create_Particle(float fParticleStartPos[3]={0.0, 0.0, 0.0}, 
-								float fParticleEndPos[3]={0.0, 0.0, 0.0}, 
-								int iParticleIndex=-1, 
-								int iEntIndex=0,
-								float fDelay=0.0,
-								bool SendToAll=true,
-								char sParticleName[64]="",
-								int iAttachmentIndex=0,
-								float fParticleAngles[3]={0.0, 0.0, 0.0}, 
-								int iFlags=0,
-								int iDamageType=0,
-								float fMagnitude=0.0,
-								float fScale=1.0,
-								float fRadius=0.0)
-{
-	TE_Start("EffectDispatch");
-	
-	static EngineVersion IsEngine;
-	if(IsEngine == Engine_Unknown)
-		IsEngine = GetEngineVersion();
-	
-	TE_WriteFloat(IsEngine == Engine_Left4Dead2 ? "m_vOrigin.x"	:"m_vStart[0]", fParticleStartPos[0]);
-	TE_WriteFloat(IsEngine == Engine_Left4Dead2 ? "m_vOrigin.y"	:"m_vStart[1]", fParticleStartPos[1]);
-	TE_WriteFloat(IsEngine == Engine_Left4Dead2 ? "m_vOrigin.z"	:"m_vStart[2]", fParticleStartPos[2]);
-	TE_WriteFloat(IsEngine == Engine_Left4Dead2 ? "m_vStart.x"	:"m_vOrigin[0]", fParticleEndPos[0]);//end point usually for bulletparticles or ropes
-	TE_WriteFloat(IsEngine == Engine_Left4Dead2 ? "m_vStart.y"	:"m_vOrigin[1]", fParticleEndPos[1]);
-	TE_WriteFloat(IsEngine == Engine_Left4Dead2 ? "m_vStart.z"	:"m_vOrigin[2]", fParticleEndPos[2]);
-	
-	static int iEffectIndex = INVALID_STRING_INDEX;
-	if(iEffectIndex < 0)
-	{
-		iEffectIndex = __FindStringIndex2(FindStringTable("EffectDispatch"), "ParticleEffect");
-		if(iEffectIndex == INVALID_STRING_INDEX)
-			SetFailState("Unable to find EffectDispatch/ParticleEffect indexes");
-		
-	}
-	
-	TE_WriteNum("m_iEffectName", iEffectIndex);
-	
-	if(iParticleIndex < 0)
-	{
-		static int iParticleStringIndex = INVALID_STRING_INDEX;
-		iParticleStringIndex = __FindStringIndex2(iEffectIndex, sParticleName);
-		if(iParticleStringIndex == INVALID_STRING_INDEX)
-			return false;
-		
-		TE_WriteNum("m_nHitBox", iParticleStringIndex);
-	}
-	else
-		TE_WriteNum("m_nHitBox", iParticleIndex);
-	
-	TE_WriteNum("entindex", iEntIndex);
-	TE_WriteNum("m_nAttachmentIndex", iAttachmentIndex);
-	
-	TE_WriteVector("m_vAngles", fParticleAngles);
-	
-	TE_WriteNum("m_fFlags", iFlags);
-	TE_WriteFloat("m_flMagnitude", fMagnitude);// saw this being used in pipebomb needs testing what it does probs shaking screen?
-	TE_WriteFloat("m_flScale", fScale);
-	TE_WriteFloat("m_flRadius", fRadius);// saw this being used in pipebomb needs testing what it does probs shaking screen?
-	TE_WriteNum("m_nDamageType", iDamageType);// this shit is required dunno why for attachpoint emitting valve probs named it wrong
-	
-	if(SendToAll)
-		TE_SendToAll(fDelay);
-	
-	return true;
-}
-
 stock void JarTrail(int iTarget)
 {
+	/*
 	int iEntity = CreateEntityByName("info_particle_system");
 	if(iEntity < 1)
 		return;
@@ -555,4 +456,13 @@ stock void JarTrail(int iTarget)
 	AcceptEntityInput(iEntity, "SetParent", iTarget);
 	
 	TeleportEntity(iEntity, view_as<float>({0.0, 0.0, 9.5}), NULL_VECTOR, NULL_VECTOR);
+	*/
+	
+	static float vecPos[3];
+	Entity_GetAbsOrigin(iTarget, vecPos);
+	vecPos[2] += 9.5;
+	
+	//TE_SetupParticleFollowEntity_Name("spitter_slime_trail", iTarget, vecPos);
+	TE_SetupParticleFollowEntity(g_iVomitJar_GooTrail, iTarget, vecPos);
+	TE_SendToAll();
 }
