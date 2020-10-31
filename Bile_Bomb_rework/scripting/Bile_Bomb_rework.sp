@@ -463,6 +463,6 @@ stock void JarTrail(int iTarget)
 	vecPos[2] += 9.5;
 	
 	//TE_SetupParticleFollowEntity_Name("spitter_slime_trail", iTarget, vecPos);
-	TE_SetupParticleFollowEntity(g_iVomitJar_GooTrail, iTarget, vecPos);
+	TE_SetupParticleFollowEntity(g_iVomitJar_GooTrail, iTarget);
 	TE_SendToAll();
 }
