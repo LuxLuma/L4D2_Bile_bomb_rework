@@ -21,7 +21,7 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <sourcescramble>
+//#include <sourcescramble>
 #include <smlib>
 #include <timocop>
 #include <lux_library>
