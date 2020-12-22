@@ -316,7 +316,7 @@ void BreakBilejar(int entity, int attacker)
 		g_flAcidAttackNextAttack[i] = fTime + ACID_ATTACK_INTERVAL;
 		g_iAcidAttackerUserid[i] = (attacker > 0 && attacker < MaxClients+1 ? GetClientUserId(attacker) : 0);
 		
-		SDKCall(hOnVomitedUpon_NB, i, attacker);
+		SDKCall(hOnVomitedUpon_NB, i, (attacker == -1 ? 0 : attacker));
 	}
 	
 	L4D_TE_Create_Particle(vecJarPos, _, g_iVomitJar_ParticleReplacement);
