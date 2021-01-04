@@ -30,7 +30,7 @@
 #pragma newdecls required
 
 #define GAMEDATA "Bile_Bomb_rework"
-#define PLUGIN_VERSION	"1.0"
+#define PLUGIN_VERSION	"1.1"
 
 
 #define ENTITY_SAFE_LIMIT 1900
@@ -273,7 +273,7 @@ void BreakBilejar(int entity, int attacker)
 	TeleportEntity(iEntity, vecJarPos, NULL_VECTOR, NULL_VECTOR);
 	AcceptEntityInput(iEntity, "Enable");
 	
-	SetVariantString("OnUser1 !self:Kill::0.5:-1");
+	SetVariantString("OnUser1 !self:Kill::1.0:-1");
 	AcceptEntityInput(iEntity, "AddOutput");
 	AcceptEntityInput(iEntity, "FireUser1");
 	
