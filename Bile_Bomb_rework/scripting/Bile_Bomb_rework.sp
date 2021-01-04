@@ -48,6 +48,8 @@
 #define VOMIT_JAR_RADIUS 200
 #define VOMIT_JAR_LIFETIME 20
 
+#define ACID_HIT_SOUND_INTERVAL 0.5
+
 Handle hOnVomitedUpon;
 Handle hOnVomitedUpon_NB;
 
@@ -60,6 +62,7 @@ int g_iVomitJar_GooTrail = INVALID_STRING_INDEX;
 float g_flAcidAttackTime[2048+1] = {-1.0, ...};
 float g_flAcidAttackNextAttack[2048+1] = {-1.0, ...};
 int g_iAcidAttackerUserid[2048+1];
+float g_flAcidHitSoundInterval[MAXPLAYERS+1] = {0.0, ...};
 
 float g_flPreventBreakTime[2048+1];
 
@@ -114,7 +117,7 @@ public void OnPluginStart()
 	if(!DHookEnableDetour(hDetour, false, PreDetonate))
 		SetFailState("Failed to detour 'CVomitJarProjectile::Detonate'");
 	
-	StartPrepSDKCall(SDKCall_Player);
+	StartPrepSDKCall(SDKCall_Entity);
 	if(!PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CTerrorPlayer::OnVomitedUpon"))
 		SetFailState("Error finding the 'CTerrorPlayer::OnVomitedUpon' signature.");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
@@ -216,7 +219,12 @@ public void PostThinkPost(int client)
 		g_flAcidAttackNextAttack[client] = fTime + ACID_ATTACK_INTERVAL;
 	}
 	AcidOnFloor(client);
-	EmitSoundToAll(g_sRandomSound[GetRandomInt(0, 5)], client, SNDCHAN_BODY, SNDLEVEL_CAR, _, SNDVOL_NORMAL);
+	
+	if(g_flAcidHitSoundInterval[client] > fTime)
+		return;
+	
+	g_flAcidHitSoundInterval[client] = fTime + ACID_HIT_SOUND_INTERVAL;
+	EmitSoundToAll(g_sRandomSound[GetRandomInt(0, 5)], client, SNDCHAN_STATIC, SNDLEVEL_CAR, _, SNDVOL_NORMAL);
 }
 
 public void AcidThink(int entity)
@@ -259,6 +267,17 @@ void BreakBilejar(int entity, int attacker)
 	float fTime = GetGameTime();
 	Entity_GetAbsOrigin(entity, vecJarPos);
 	
+	//fixes sound bugs
+	int iEntity = CreateEntityByName("info_goal_infected_chase");
+	DispatchSpawn(iEntity);
+	TeleportEntity(iEntity, vecJarPos, NULL_VECTOR, NULL_VECTOR);
+	AcceptEntityInput(iEntity, "Enable");
+	
+	SetVariantString("OnUser1 !self:Kill::0.5:-1");
+	AcceptEntityInput(iEntity, "AddOutput");
+	AcceptEntityInput(iEntity, "FireUser1");
+	
+	//removed valve's native ray code for vomiting with just vector checks was way too inconsistent with bazar results
 	for(int i = 1; i <= MaxClients; ++i)
 	{
 		if(!IsClientInGame(i) || !IsPlayerAlive(i))
@@ -280,6 +299,7 @@ void BreakBilejar(int entity, int attacker)
 				g_flAcidAttackTime[i] = fTime + VOMIT_JAR_LIFETIME_SURVIVOR * ACID_LIFETIME_SURVIVOR;
 				g_flAcidAttackNextAttack[i] = fTime + ACID_ATTACK_INTERVAL_SURVIVOR;
 				g_iAcidAttackerUserid[i] = 0;
+				g_flAcidHitSoundInterval[i] = fTime + ACID_HIT_SOUND_INTERVAL;
 				
 				SDKCall(hOnVomitedUpon, i, (attacker == -1 ? i : attacker), 0);
 			}
@@ -295,6 +315,7 @@ void BreakBilejar(int entity, int attacker)
 				g_flAcidAttackTime[i] = fTime + VOMIT_JAR_LIFETIME * ACID_LIFETIME;
 				g_flAcidAttackNextAttack[i] = fTime + ACID_ATTACK_INTERVAL;
 				g_iAcidAttackerUserid[i] = (attacker > 0 && attacker < MaxClients+1 ? GetClientUserId(attacker) : 0);
+				g_flAcidHitSoundInterval[i] = fTime + ACID_HIT_SOUND_INTERVAL;
 				
 				SDKCall(hOnVomitedUpon, i, (attacker == -1 ? i : attacker), 0);
 			}
