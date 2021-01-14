@@ -4,34 +4,6 @@
 	{
 		"Functions"
 		{
-			"CTerrorPlayer::OnHitByVomitJar"
-			{
-				"signature"		"CTerrorPlayer::OnHitByVomitJar"
-				"callconv"		"thiscall"
-				"return"		"void"
-				"this"			"entity"
-				"arguments"
-				{
-					"attacker"
-					{
-						"type"	"cbaseentity"
-					}
-				}
-			}
-			"Infected::OnHitByVomitJar"
-			{
-				"signature"		"Infected::OnHitByVomitJar"
-				"callconv"		"thiscall"
-				"return"		"void"
-				"this"			"entity"
-				"arguments"
-				{
-					"attacker"
-					{
-						"type"	"cbaseentity"
-					}
-				}
-			}
 			"CVomitJarProjectile::ExplodeVomit"
 			{
 				"signature"		"CVomitJarProjectile::ExplodeVomit"
@@ -74,26 +46,6 @@
 				"this"			"entity"
 			}
 		}
-		"MemPatches"
-		{
-			"CVomitJarProjectile::ExplodeVomit()::mobspawn_Patch"
-			{
-				"signature"			"CVomitJarProjectile::ExplodeVomit"
-				"linux"
-				{
-					"offset"		"1766"
-					"verify"		"\xE8"
-					"patch"			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
-					
-				}
-				"windows"
-				{
-					"offset"		"1101"
-					"verify"		"\x53\xE8"
-					"patch"			"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
-				}
-			}
-		}
 		"Signatures"
 		{
 			"CVomitJarProjectile::ExplodeVomit"
@@ -102,14 +54,6 @@
 				"linux"			"@_ZN19CVomitJarProjectile12ExplodeVomitE6VectorS0_"
 				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x08\x00\x00\xA1\x2A\x2A\x2A\x2A\x33\xC5\x89\x45\xFC\x8B\x45\x08\x8B\x55\x10\xF3\x0F\x10\x5D\x10"
 								/* ? ? ? ? ? ? 08 00 00 A1 ? ? ? ? 33 C5 89 45 FC 8B 45 08 8B 55 10 F3 0F 10 5D 10 */
-				
-			}
-			"CTerrorPlayer::OnHitByVomitJar"
-			{
-				"library"		"server"
-				"linux"			"@_ZN13CTerrorPlayer15OnHitByVomitJarEP20CBaseCombatCharacter"
-				"windows"		"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x8B\x06\x8B\x90\x74\x07\x00\x00"
-								/* ? ? ? ? ? ? 56 8B F1 E8 ? ? ? ? 84 C0 74 ? 8B 06 8B 90 74 07 00 00  */
 				
 			}
 			"CTerrorPlayer::OnVomitedUpon"
