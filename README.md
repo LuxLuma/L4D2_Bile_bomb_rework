@@ -1,3 +1,9 @@
+##### Requirements: 
+- [lux_library](https://github.com/LuxLuma/Lux-Library/tree/master/scripting/include) include to compile. 
+- [DHooks (Experimental Dynamic Detour support)](https://forums.alliedmods.net/showpost.php?p=2588686&postcount=589) 
+
+
+
 #### Convars  
 ````
 // Acid attack interval
@@ -56,9 +62,5 @@ bb_vomitjar_radius "200.0"
 // Default: "100.0"
 bb_vomitjar_radius_survivor "100.0"
 ````
-##### Requirements: 
-- [lux_library](https://github.com/LuxLuma/Lux-Library/tree/master/scripting/include) include to compile. 
-- [DHooks (Experimental Dynamic Detour support)](https://github.com/LuxLuma/Lux-Library/tree/master/scripting/include) 
-
 #### Acid pool preview
 ![](https://raw.githubusercontent.com/LuxLuma/L4D2_Bile_bomb_rework/master/acid_trail.gif)
